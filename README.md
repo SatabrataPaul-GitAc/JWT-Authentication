@@ -1,3 +1,3 @@
 # jwt_auth
 
-#Backend Code for Simple JWT Authentication using Node and Expresss JS#
+# Backend Code for Simple JWT Authentication using Node and Expresss JS
