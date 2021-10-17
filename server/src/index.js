@@ -76,7 +76,7 @@ app.post("/register",(req,res)=>{
 
     }
     catch(err){
-        return res.status(err.statusCode | 400).json({status: "error",message: err.message});
+        res.status(err.statusCode | 400).json({status: "error",message: err.message});
     }
 });
 
