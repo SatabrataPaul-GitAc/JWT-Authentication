@@ -3,6 +3,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const { verify } = require("jsonwebtoken");
 const Users = require("../model/model.js");
 const HTTPError = require("../errorMesage.js");
 const {createAccessToken,createRefreshToken,sendAccessToken,sendRefreshToken} = require("./tokens.js");
@@ -76,7 +77,7 @@ app.post("/register",(req,res)=>{
 
     }
     catch(err){
-        return res.status(err.statusCode | 400).json({status: "error",message: err.message});
+        res.status(err.statusCode | 400).json({status: "error",message: err.message});
     }
 });
 
@@ -150,6 +151,53 @@ app.post("/protected",(req,res) =>{
         res.status(err.statusCode | 400).json({status: "error",message: err.message});
     }
 });
+
+
+
+//Route for getting a new access token with a refresh token
+app.post("/refresh_token",async (req,res)=>{
+    const refresh_token = req.cookies.refreshtoken;
+
+    if(!refresh_token) res.status(400).json({message: "No refresh token found",accessToken: ""});
+
+    //If refresh token found , verifiying it to get the payload
+    let payload = null;
+
+    try{
+        payload = verify(refresh_token,process.env.refresh_token_secret_key);
+    }
+    catch(err){
+        res.status(400).json({accessToken: ""});
+    }
+
+    //Finding whether a user exists in the database with the userid derived from the payload
+    Users.findById(payload.userId,(err,docs)=>{
+        if(err){
+            console.log(err);
+        }
+        else{
+            if(!docs) res.json({accesstoken: ""});
+
+            //If user exists check whether the existing refresh token of the user matches the one that was passsed on here 
+            if(docs.refreshToken != refresh_token) res.json({accessToken: ""});
+
+            //Create new refresh and access token
+            const accesstoken = createAccessToken(user.id,user.email);
+            const refreshtoken = createRefreshToken(user.id,user.email);
+
+            //Saving new refresh token to the database
+            docs.refreshToken = refreshtoken;
+            await docs.save();
+
+            sendAccessToken(req,res,accesstoken);
+            sendRefreshToken(res,refreshtoken);
+
+
+        }
+    });
+});
+
+
 
 app.listen(process.env.PORT,()=>{
     console.log(`Server started of port ${process.env.PORT}`)
