@@ -109,8 +109,9 @@ app.post("/login",async (req,res)=>{
 
         //Sending the refresh token back to client side as a cookie 
         //and the access token as a regular response after the authentication)login has been done)
-        sendAccessToken(req,res,accesstoken);
         sendRefreshToken(res,refreshtoken);
+        sendAccessToken(req,res,accesstoken);
+
 
     }
     catch(err){
@@ -121,7 +122,7 @@ app.post("/login",async (req,res)=>{
 
 //Logout route
 app.post("/logout",(_req,res)=>{
-    res.clearCookie("RefreshToken");
+    res.clearCookie("RefreshToken",{ path: "/refresh_token" });
     res.status(200).json({status: "success",message: "Successfully loggedout"});
 });
 
@@ -156,7 +157,7 @@ app.post("/protected",(req,res) =>{
 
 //Route for getting a new access token with a refresh token
 app.post("/refresh_token",async (req,res)=>{
-    const refresh_token = req.cookies.refreshtoken;
+    const refresh_token = req.cookies.RefreshToken;
 
     if(!refresh_token) res.status(400).json({message: "No refresh token found",accessToken: ""});
 
@@ -182,12 +183,12 @@ app.post("/refresh_token",async (req,res)=>{
             if(docs.refreshToken != refresh_token) res.json({accessToken: ""});
 
             //Create new refresh and access token
-            const accesstoken = createAccessToken(user.id,user.email);
-            const refreshtoken = createRefreshToken(user.id,user.email);
+            const accesstoken = createAccessToken(docs.id,docs.email);
+            const refreshtoken = createRefreshToken(docs.id,docs.email);
 
             //Saving new refresh token to the database
             docs.refreshToken = refreshtoken;
-            await docs.save();
+            docs.save();
 
             sendAccessToken(req,res,accesstoken);
             sendRefreshToken(res,refreshtoken);

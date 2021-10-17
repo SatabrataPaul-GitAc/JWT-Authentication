@@ -29,7 +29,7 @@ const sendRefreshToken = (res,refreshtoken) => {
     res.cookie("RefreshToken",refreshtoken,{
         httpOnly: true,
         path: "/refresh_token"
-    })
+    });
 };
 
 
