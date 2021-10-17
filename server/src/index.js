@@ -40,7 +40,6 @@ const hashPassword = function generateHash(password){
     }
 }
 
-
 //Registration Route
 app.post("/register",(req,res)=>{
     try{
@@ -56,7 +55,7 @@ app.post("/register",(req,res)=>{
 
             else{
                 password = hashPassword(password);
-                console.log(password)
+                console.log(password);
         
                 const newUser = new Users({
                     email,
@@ -71,13 +70,13 @@ app.post("/register",(req,res)=>{
                 else{
                     res.status(200).json({status: "success",message: "User Registered Successfully"});
                 }
-            })
+            });
         }
     });
 
     }
     catch(err){
-        res.status(err.statusCode | 400).json({status: "error",message: err.message});
+        return res.status(err.statusCode | 400).json({status: "error",message: err.message});
     }
 });
 
@@ -90,32 +89,36 @@ app.post("/login",async (req,res)=>{
 
         if(!email) throw new HTTPError(400,"Email is required !");
         if(!password) throw new HTTPError(400,"Password is required !");
+        
+        Users.findOne({email: email},(err,user)=>{
+            if(err){
+                console.log(err);
+            }
+            
+            if(!user) res.status(400).json({status: "error", message: "User is not registered ! Login not possible"});
 
-        let user = await Users.findOne({email: email}).exec();
+            const valid = bcrypt.compareSync(password,user.password);
 
-        if(!user) throw new HTTPError(400,"User is not registered ! Login not possible");
-
-        const valid = bcrypt.compareSync(password,user.password);
-
-        if(!valid) throw new HTTPError(400,"Password is not correct");
-
-        //Create an access and refresh token
-        const accesstoken = createAccessToken(user.id,user.email);
-        const refreshtoken = createRefreshToken(user.id,user.email);
-
-        //Saving the refreshtoken in the database
-        user.refreshToken = refreshtoken;
-        await user.save();
-
-        //Sending the refresh token back to client side as a cookie 
-        //and the access token as a regular response after the authentication)login has been done)
-        sendRefreshToken(res,refreshtoken);
-        sendAccessToken(req,res,accesstoken);
+            if(!valid) res.status(400).json({status: "error", message: "Password is not correct"});
 
 
+            //Create an access and refresh token
+            const accesstoken = createAccessToken(user.id,user.email);
+            const refreshtoken = createRefreshToken(user.id,user.email);
+
+            //Saving the refreshtoken in the database
+            user.refreshToken = refreshtoken;
+            user.save();
+
+            //Sending the refresh token back to client side as a cookie 
+            //and the access token as a regular response after the authentication)login has been done)
+            sendRefreshToken(res,refreshtoken);
+            sendAccessToken(req,res,accesstoken);
+
+        });
     }
     catch(err){
-        res.status(err.statusCode | 400).json({status: "error",message: err.message});
+        return res.status(err.statusCode | 400).json({status: "error",message: err.message});
     }
 });
 
@@ -149,7 +152,7 @@ app.post("/protected",(req,res) =>{
         }
     }
     catch(err){
-        res.status(err.statusCode | 400).json({status: "error",message: err.message});
+        return res.status(err.statusCode | 400).json({status: "error",message: err.message});
     }
 });
 
